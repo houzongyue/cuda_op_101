@@ -1,4 +1,5 @@
 #include "reduce_impls.h"
+#include "gpu_test_fixture.h"
 #include <cuda_runtime.h>
 
 // Kernel: Linear reduction with single thread
@@ -30,50 +31,22 @@ __global__ void kernelReduceParallelV0(int* devArr, int n, int* devRes) {
 
 // Launcher: GPU Linear reduction
 int reduceGpuLinear(int* arr, int n) {
-    int* devArr;
-    int* devRes;
-    int hostRes;
-
-    cudaMalloc(&devArr, sizeof(int) * n);
-    cudaMalloc(&devRes, sizeof(int));
-
-    cudaMemcpy(devArr, arr, sizeof(int) * n, cudaMemcpyHostToDevice);
-    cudaMemset(devRes, 0, sizeof(int));
-
-    kernelReduceLinear<<<1, 1>>>(devArr, n, devRes);
-
-    cudaMemcpy(&hostRes, devRes, sizeof(int), cudaMemcpyDeviceToHost);
-
-    cudaFree(devArr);
-    cudaFree(devRes);
-
-    return hostRes;
+    GpuReduceFixture fixture(arr, n);
+    return fixture.execute([n](int* devArr, int arraySize, int* devRes) {
+        kernelReduceLinear<<<1, 1>>>(devArr, arraySize, devRes);
+    });
 }
 
 // Launcher: GPU Parallel reduction v0
 int reduceGpuParallelV0(int* arr, int n) {
-    int* devArr;
-    int* devRes;
-    int hostRes;
+    GpuReduceFixture fixture(arr, n);
+    return fixture.execute([n](int* devArr, int arraySize, int* devRes) {
+        // Use reasonable grid/block configuration
+        int blockSize = 256;
+        int gridSize = (arraySize + blockSize - 1) / blockSize;
+        // Limit grid size to avoid too many blocks
+        if (gridSize > 1024) gridSize = 1024;
 
-    cudaMalloc(&devArr, sizeof(int) * n);
-    cudaMalloc(&devRes, sizeof(int));
-
-    cudaMemcpy(devArr, arr, sizeof(int) * n, cudaMemcpyHostToDevice);
-    cudaMemset(devRes, 0, sizeof(int));
-
-    // Use reasonable grid/block configuration
-    int blockSize = 256;
-    int gridSize = (n + blockSize - 1) / blockSize;
-    // Limit grid size to avoid too many blocks
-    if (gridSize > 1024) gridSize = 1024;
-
-    kernelReduceParallelV0<<<gridSize, blockSize>>>(devArr, n, devRes);
-
-    cudaMemcpy(&hostRes, devRes, sizeof(int), cudaMemcpyDeviceToHost);
-
-    cudaFree(devArr);
-    cudaFree(devRes);
-
-    return hostRes;
+        kernelReduceParallelV0<<<gridSize, blockSize>>>(devArr, arraySize, devRes);
+    });
 }

@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include "timer.h"
 #include "reduce_impls.h"
+#include "benchmark_helper.h"
 
 using namespace std;
 
@@ -11,14 +12,6 @@ void printHeader() {
     cout << string(70, '=') << "\n";
     cout << "Array Reduction Benchmark\n";
     cout << string(70, '=') << "\n";
-}
-
-void printResult(const string& name, int result, int expected, float timeUs) {
-    string status = (result == expected) ? "[PASS]" : "[FAIL]";
-    cout << left << setw(25) << name
-         << " | Result: " << setw(12) << result
-         << " | Time: " << fixed << setprecision(2) << setw(10) << timeUs << " us"
-         << " | " << status << "\n";
 }
 
 int main() {
@@ -36,34 +29,20 @@ int main() {
     cout << string(70, '-') << "\n";
 
     // CPU Baseline (also serves as reference)
-    int reference;
-    float cpuTime;
-    {
-        CpuTimer timer;
-        timer.start();
-        reference = reduceCpuBaseline(arr, n);
-        timer.stop();
-        cpuTime = timer.elapsed();
-        printResult("CPU Baseline", reference, reference, cpuTime);
-    }
+    auto cpuResult = benchmarkCpu("CPU Baseline", [&]() {
+        return reduceCpuBaseline(arr, n);
+    }, n);  // Expected result is n (all elements are 1)
+    int reference = cpuResult.result;
 
     // GPU Linear
-    {
-        GpuTimer timer;
-        timer.start();
-        int result = reduceGpuLinear(arr, n);
-        timer.stop();
-        printResult("GPU Linear (1 thread)", result, reference, timer.elapsed());
-    }
+    benchmarkGpu("GPU Linear (single thread)", [&]() {
+        return reduceGpuLinear(arr, n);
+    }, reference);
 
     // GPU Parallel V0
-    {
-        GpuTimer timer;
-        timer.start();
-        int result = reduceGpuParallelV0(arr, n);
-        timer.stop();
-        printResult("GPU Parallel (multi v0)", result, reference, timer.elapsed());
-    }
+    benchmarkGpu("GPU Parallel (multi v0)", [&]() {
+        return reduceGpuParallelV0(arr, n);
+    }, reference);
 
     cout << string(70, '=') << "\n\n";
 
