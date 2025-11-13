@@ -7,13 +7,6 @@
 
 using namespace std;
 
-void printHeader() {
-    cout << "\n";
-    cout << string(70, '=') << "\n";
-    cout << "Array Reduction Benchmark\n";
-    cout << string(70, '=') << "\n";
-}
-
 int main() {
     // Configuration
     const int n = 25600000;  // Array size
@@ -24,9 +17,7 @@ int main() {
         arr[i] = 1;
     }
 
-    printHeader();
-    cout << "Array size: " << n << " elements\n";
-    cout << string(70, '-') << "\n";
+    printBenchmarkHeader("Array Reduction Benchmark", n);
 
     // CPU Baseline (also serves as reference)
     auto cpuResult = benchmarkCpu("CPU Baseline", [&]() {
@@ -44,7 +35,7 @@ int main() {
         return reduceGpuParallelV0(arr, n);
     }, reference);
 
-    cout << string(70, '=') << "\n\n";
+    printBenchmarkFooter();
 
     delete[] arr;
     return 0;
