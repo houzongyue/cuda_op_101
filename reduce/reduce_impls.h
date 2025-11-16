@@ -13,3 +13,4 @@ int reduceCpuBaseline(int* arr, int n);
 // GPU implementations (launcher functions handle device memory and configuration)
 int reduceGpuLinear(int* arr, int n);
 int reduceGpuParallelV0(int* arr, int n);
+int reduceGpuParallelLab(int* arr, int n);

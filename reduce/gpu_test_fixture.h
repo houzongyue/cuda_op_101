@@ -29,20 +29,19 @@ public:
         cudaFree(devRes);
     }
 
-    // Execute a kernel with given grid and block configuration
-    // The kernel function should be a lambda or function that launches the kernel
-    int execute(std::function<void(int*, int, int*)> kernelLauncher) {
-        // Launch the kernel via the provided launcher
-        kernelLauncher(devArr, n, devRes);
+    // Run a kernel and return the result
+    // Automatically provides devArr, n, and devRes to the kernel
+    template<typename KernelFunc>
+    int run(dim3 gridSize, dim3 blockSize, KernelFunc kernel) {
+        kernel<<<gridSize, blockSize>>>(devArr, n, devRes);
+        cudaDeviceSynchronize();
 
-        // Copy result back to host
-        int hostRes;
-        cudaMemcpy(&hostRes, devRes, sizeof(int), cudaMemcpyDeviceToHost);
-
-        return hostRes;
+        int result;
+        cudaMemcpy(&result, devRes, sizeof(int), cudaMemcpyDeviceToHost);
+        return result;
     }
 
-    // Getters for direct kernel access if needed
+    // Getters for advanced usage if needed
     int* getDevArr() { return devArr; }
     int* getDevRes() { return devRes; }
     int getN() { return n; }

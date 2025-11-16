@@ -29,24 +29,36 @@ __global__ void kernelReduceParallelV0(int* devArr, int n, int* devRes) {
     atomicAdd(devRes, partialSum);
 }
 
+/*
+    end of kernel implementations
+*/
+
 // Launcher: GPU Linear reduction
 int reduceGpuLinear(int* arr, int n) {
     GpuReduceFixture fixture(arr, n);
-    return fixture.execute([n](int* devArr, int arraySize, int* devRes) {
-        kernelReduceLinear<<<1, 1>>>(devArr, arraySize, devRes);
-    });
+    return fixture.run(dim3(1), dim3(1), kernelReduceLinear);
 }
 
 // Launcher: GPU Parallel reduction v0
 int reduceGpuParallelV0(int* arr, int n) {
     GpuReduceFixture fixture(arr, n);
-    return fixture.execute([n](int* devArr, int arraySize, int* devRes) {
-        // Use reasonable grid/block configuration
-        int blockSize = 256;
-        int gridSize = (arraySize + blockSize - 1) / blockSize;
-        // Limit grid size to avoid too many blocks
-        if (gridSize > 1024) gridSize = 1024;
 
-        kernelReduceParallelV0<<<gridSize, blockSize>>>(devArr, arraySize, devRes);
-    });
+    int blockSize = 256;
+    int gridSize = (n + blockSize - 1) / blockSize;
+    // Limit grid size to avoid too many blocks doing atomicAdd
+    if (gridSize > 1024) gridSize = 1024;
+
+    return fixture.run(dim3(gridSize), dim3(blockSize), kernelReduceParallelV0);
 }
+
+// Launcher: GPU Parallel reduction lab
+int reduceGpuParallelLab(int *arr, int n) {
+    GpuReduceFixture fixture(arr, n);
+
+    int blockSize = 512;
+    int gridSize = (n + blockSize - 1) / blockSize;
+
+    return fixture.run(dim3(gridSize), dim3(blockSize), kernelReduceParallelV0);
+}
+
+// TODO: 自动计算最优 blockSize；Grid-Stride Loop 模式

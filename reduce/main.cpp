@@ -35,6 +35,11 @@ int main() {
         return reduceGpuParallelV0(arr, n);
     }, reference);
 
+    // GPU Parallel lab
+    benchmarkGpu("GPU Parallel (multi lab)", [&]() {
+        return reduceGpuParallelLab(arr, n);
+    }, reference);
+
     printBenchmarkFooter();
 
     delete[] arr;
